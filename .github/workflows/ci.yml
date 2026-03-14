@@ -101,8 +101,8 @@ jobs:
             # 최신 코드 가져오기
             git pull origin main
 
-            # 프로덕션 의존성 설치
-            pnpm install --frozen-lockfile --prod
+            # 의존성 설치 (prisma 등 devDependencies 포함)
+            pnpm install --frozen-lockfile
 
             # Prisma 클라이언트 재생성
             pnpm prisma generate
