@@ -38,6 +38,13 @@ lerna-debug.log*
 # SSH Keys
 *.pem
 
+# 루트 이미지 파일
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+
 # dotenv environment variable files
 .env
 .env.development.local
