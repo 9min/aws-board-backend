@@ -92,6 +92,9 @@ jobs:
             -p ${{ secrets.EC2_PORT }} \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
+            source ~/.bashrc 2>/dev/null || true
+            export PNPM_HOME="$HOME/.local/share/pnpm"
+            export PATH="$PNPM_HOME:$PATH"
             cd ${{ secrets.EC2_APP_DIR }}
 
             # 최신 코드 가져오기
