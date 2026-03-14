@@ -86,9 +86,14 @@ describe('AuthService', () => {
 
       await service.register(registerDto);
 
-      const createCall = mockPrismaService.user.create.mock.calls[0][0];
-      const savedPassword = createCall.data.password as string;
-      const isHashed = await bcrypt.compare(registerDto.password, savedPassword);
+      const createCall = mockPrismaService.user.create.mock.calls[0][0] as {
+        data: { password: string };
+      };
+      const savedPassword = createCall.data.password;
+      const isHashed = await bcrypt.compare(
+        registerDto.password,
+        savedPassword,
+      );
       expect(isHashed).toBe(true);
     });
   });
