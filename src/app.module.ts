@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
+import { HttpExceptionFilter } from './common/filters/httpException.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import configuration from './config/configuration';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -13,8 +17,13 @@ import configuration from './config/configuration';
       load: [configuration],
     }),
     PrismaModule,
+    AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+  ],
 })
 export class AppModule {}
