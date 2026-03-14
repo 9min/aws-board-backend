@@ -21,6 +21,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
+import { AttachFileDto } from '../files/dto/attach-file.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PostQueryDto } from './dto/post-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -70,11 +71,26 @@ export class PostsController {
     return this.postsService.update(id, dto, user.id);
   }
 
+  @Post(':id/attachments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '게시글에 파일 첨부 (S3 업로드 완료 후 호출)' })
+  @ApiResponse({ status: 201, description: '파일 첨부 성공' })
+  @ApiResponse({ status: 403, description: '권한 없음' })
+  @ApiResponse({ status: 404, description: '게시글 없음' })
+  attachFile(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AttachFileDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.postsService.attachFile(id, dto.key, user.id);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: '게시글 삭제 (작성자만)' })
+  @ApiOperation({ summary: '게시글 삭제 (작성자만, S3 파일 함께 삭제)' })
   @ApiResponse({ status: 204, description: '게시글 삭제 성공' })
   @ApiResponse({ status: 403, description: '권한 없음' })
   @ApiResponse({ status: 404, description: '게시글 없음' })

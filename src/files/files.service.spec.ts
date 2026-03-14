@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { PrismaService } from '../prisma/prisma.service';
 import { FilesService, S3_CLIENT } from './files.service';
 
 jest.mock('@aws-sdk/s3-request-presigner', () => ({
@@ -10,7 +11,7 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
 describe('FilesService', () => {
   let service: FilesService;
 
-  const mockS3Client = {};
+  const mockS3Client = { send: jest.fn() };
   const mockConfigService = {
     get: jest.fn((key: string) => {
       const config: Record<string, string> = {
@@ -20,6 +21,11 @@ describe('FilesService', () => {
       return config[key];
     }),
   };
+  const mockPrismaService = {
+    fileAttachment: {
+      create: jest.fn(),
+    },
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -27,6 +33,7 @@ describe('FilesService', () => {
         FilesService,
         { provide: S3_CLIENT, useValue: mockS3Client },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
@@ -103,6 +110,49 @@ describe('FilesService', () => {
         }),
         expect.objectContaining({ expiresIn: 300 }),
       );
+    });
+  });
+
+  describe('attachToPost', () => {
+    it('파일 첨부 정보를 DB에 저장하고 반환한다', async () => {
+      const mockAttachment = {
+        id: 1,
+        postId: 1,
+        key: 'uploads/1/uuid.jpg',
+        url: 'https://test-bucket.s3.ap-northeast-2.amazonaws.com/uploads/1/uuid.jpg',
+        createdAt: new Date(),
+      };
+      mockPrismaService.fileAttachment.create.mockResolvedValue(mockAttachment);
+
+      const result = await service.attachToPost(1, 'uploads/1/uuid.jpg');
+
+      expect(result).toEqual(mockAttachment);
+      expect(mockPrismaService.fileAttachment.create).toHaveBeenCalledWith({
+        data: {
+          postId: 1,
+          key: 'uploads/1/uuid.jpg',
+          url: 'https://test-bucket.s3.ap-northeast-2.amazonaws.com/uploads/1/uuid.jpg',
+        },
+      });
+    });
+  });
+
+  describe('deleteObjects', () => {
+    it('S3에서 파일들을 삭제한다', async () => {
+      mockS3Client.send.mockResolvedValue({});
+
+      await service.deleteObjects([
+        'uploads/1/file1.jpg',
+        'uploads/1/file2.jpg',
+      ]);
+
+      expect(mockS3Client.send).toHaveBeenCalledTimes(2);
+    });
+
+    it('keys가 빈 배열이면 S3 호출을 하지 않는다', async () => {
+      await service.deleteObjects([]);
+
+      expect(mockS3Client.send).not.toHaveBeenCalled();
     });
   });
 });

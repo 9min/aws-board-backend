@@ -8,6 +8,7 @@ import { FilesService, S3_CLIENT } from './files.service';
 @Module({
   imports: [AuthModule, ConfigModule],
   controllers: [FilesController],
+  exports: [FilesService],
   providers: [
     FilesService,
     {
