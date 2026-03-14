@@ -1,6 +1,6 @@
 # AWS 기반 게시판 API
 
-![CI](https://github.com/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/9min/aws-board-backend/actions/workflows/ci.yml/badge.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-20-339933?logo=node.js)
 ![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
@@ -656,6 +656,11 @@ POST /files/presigned-url
   "contentType": "image/jpeg"
 }
 ```
+
+| 필드 | 타입 | 필수 | 허용 값 |
+|------|------|------|---------|
+| fileName | string | ✅ | 영문/숫자/특수문자(`-`, `_`, `.`, 공백) |
+| contentType | string | ✅ | `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `application/pdf` |
 
 **Response (201)**
 
