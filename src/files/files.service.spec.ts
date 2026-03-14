@@ -1,11 +1,11 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService, S3_CLIENT } from './files.service';
 
-jest.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: jest.fn(),
+jest.mock('@aws-sdk/s3-presigned-post', () => ({
+  createPresignedPost: jest.fn(),
 }));
 
 describe('FilesService', () => {
@@ -44,31 +44,38 @@ describe('FilesService', () => {
     jest.clearAllMocks();
   });
 
-  describe('getPresignedUrl', () => {
-    it('presignedUrl과 key를 반환한다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue(
-        'https://mock-presigned-url',
-      );
+  describe('getPresignedPost', () => {
+    const mockPresignedPost = {
+      url: 'https://test-bucket.s3.ap-northeast-2.amazonaws.com/',
+      fields: {
+        key: 'uploads/1/uuid.jpg',
+        'Content-Type': 'image/jpeg',
+        Policy: 'mock-policy',
+        'X-Amz-Signature': 'mock-signature',
+      },
+    };
 
-      const result = await service.getPresignedUrl(
+    it('url, fields, key를 반환한다', async () => {
+      (createPresignedPost as jest.Mock).mockResolvedValue(mockPresignedPost);
+
+      const result = await service.getPresignedPost(
         { fileName: 'photo.jpg', contentType: 'image/jpeg' },
         1,
       );
 
-      expect(result.presignedUrl).toBe('https://mock-presigned-url');
+      expect(result.url).toBe(mockPresignedPost.url);
+      expect(result.fields).toEqual(mockPresignedPost.fields);
       expect(result.key).toMatch(/^uploads\/1\/.+\.jpg$/);
     });
 
     it('key는 UUID 기반으로 고유하게 생성된다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue(
-        'https://mock-presigned-url',
-      );
+      (createPresignedPost as jest.Mock).mockResolvedValue(mockPresignedPost);
 
-      const result1 = await service.getPresignedUrl(
+      const result1 = await service.getPresignedPost(
         { fileName: 'photo.jpg', contentType: 'image/jpeg' },
         1,
       );
-      const result2 = await service.getPresignedUrl(
+      const result2 = await service.getPresignedPost(
         { fileName: 'photo.jpg', contentType: 'image/jpeg' },
         1,
       );
@@ -77,11 +84,9 @@ describe('FilesService', () => {
     });
 
     it('파일 확장자가 없는 경우에도 key를 생성한다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue(
-        'https://mock-presigned-url',
-      );
+      (createPresignedPost as jest.Mock).mockResolvedValue(mockPresignedPost);
 
-      const result = await service.getPresignedUrl(
+      const result = await service.getPresignedPost(
         { fileName: 'noextension', contentType: 'image/jpeg' },
         1,
       );
@@ -89,26 +94,23 @@ describe('FilesService', () => {
       expect(result.key).toMatch(/^uploads\/1\/.+$/);
     });
 
-    it('S3Client에 올바른 버킷과 키로 PutObjectCommand를 호출한다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue(
-        'https://mock-presigned-url',
-      );
+    it('5MB 용량 제한 조건이 포함된다', async () => {
+      (createPresignedPost as jest.Mock).mockResolvedValue(mockPresignedPost);
 
-      await service.getPresignedUrl(
+      await service.getPresignedPost(
         { fileName: 'photo.jpg', contentType: 'image/jpeg' },
         1,
       );
 
-      expect(getSignedUrl).toHaveBeenCalledWith(
-        mockS3Client,
-        expect.objectContaining({
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          input: expect.objectContaining({
-            Bucket: 'test-bucket',
-            ContentType: 'image/jpeg',
-          }),
-        }),
-        expect.objectContaining({ expiresIn: 300 }),
+      const calls = (createPresignedPost as jest.Mock).mock
+        .calls as unknown as Array<
+        [unknown, { Conditions: unknown[]; Expires: number }]
+      >;
+      const callArg = calls[0][1];
+
+      expect(callArg.Expires).toBe(300);
+      expect(callArg.Conditions).toEqual(
+        expect.arrayContaining([['content-length-range', 0, 5 * 1024 * 1024]]),
       );
     });
   });

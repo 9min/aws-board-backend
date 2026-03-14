@@ -417,10 +417,12 @@ DELETE /posts/:postId/comments/:commentId
 
 S3에 직접 업로드하는 방식입니다. 서버를 거치지 않고 클라이언트가 S3에 직접 업로드합니다.
 
-#### Presigned URL 발급 🔒
+> **제한**: 최대 **5MB**, 유효 시간 **5분**. 5MB 초과 시 S3에서 직접 거부합니다.
+
+#### Presigned Post 발급 🔒
 
 ```
-POST /files/presigned-url
+POST /files/presigned-post
 ```
 
 **Request Body**
@@ -437,12 +439,18 @@ POST /files/presigned-url
 | fileName | string | ✅ | 영문/숫자/특수문자(`-`, `_`, `.`, 공백) |
 | contentType | string | ✅ | `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `application/pdf` |
 
-**Response (200)**
+**Response (201)**
 
 ```json
 {
   "data": {
-    "presignedUrl": "https://your-bucket.s3.amazonaws.com/uploads/1/uuid.jpg?...",
+    "url": "https://your-bucket.s3.ap-northeast-2.amazonaws.com/",
+    "fields": {
+      "key": "uploads/1/uuid.jpg",
+      "Content-Type": "image/jpeg",
+      "Policy": "...",
+      "X-Amz-Signature": "..."
+    },
     "key": "uploads/1/uuid.jpg"
   },
   "error": null,
@@ -450,42 +458,46 @@ POST /files/presigned-url
 }
 ```
 
-#### S3 업로드 흐름
+#### S3 업로드 전체 흐름
 
 ```
-클라이언트 → POST /files/presigned-url → 서버 → presignedUrl 반환
-클라이언트 → PUT presignedUrl (파일 첨부) → S3 직접 업로드
+1. POST /files/presigned-post        → url, fields, key 받기
+2. POST url (multipart/form-data)    → S3에 직접 업로드 (5MB 초과 시 S3가 거부)
+3. POST /posts/:id/attachments       → 게시글에 파일 연결
 ```
 
 **업로드 예시 코드**
 
 ```javascript
-// 1. Presigned URL 발급
-const response = await fetch('/files/presigned-url', {
+// 1. Presigned Post 발급
+const response = await fetch('/files/presigned-post', {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
   },
-  body: JSON.stringify({
-    fileName: 'photo.jpg',
-    contentType: 'image/jpeg',
-  }),
+  body: JSON.stringify({ fileName: 'photo.jpg', contentType: 'image/jpeg' }),
 });
 const { data } = await response.json();
 
-// 2. S3에 직접 업로드 (PUT 요청)
-await fetch(data.presignedUrl, {
-  method: 'PUT',
-  headers: { 'Content-Type': 'image/jpeg' },
-  body: file, // File 객체 (input[type=file]에서 가져온 파일)
+// 2. S3에 직접 업로드 (multipart/form-data POST)
+const formData = new FormData();
+Object.entries(data.fields).forEach(([k, v]) => formData.append(k, v));
+formData.append('file', file); // File 객체는 반드시 마지막에 추가
+
+await fetch(data.url, { method: 'POST', body: formData });
+// 5MB 초과 시 S3가 403 에러 반환
+
+// 3. 게시글에 파일 연결
+await fetch(`/posts/${postId}/attachments`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ key: data.key }),
 });
-
-// 3. 저장된 파일 경로
-console.log(data.key); // "uploads/1/uuid.jpg"
 ```
-
-> Presigned URL의 유효 시간은 **5분(300초)**입니다. 발급 후 5분 이내에 업로드해야 합니다.
 
 ---
 
