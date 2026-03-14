@@ -36,10 +36,7 @@ export class PostsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: '게시글 작성' })
   @ApiResponse({ status: 201, description: '게시글 작성 성공' })
-  create(
-    @Body() dto: CreatePostDto,
-    @CurrentUser() user: CurrentUserPayload,
-  ) {
+  create(@Body() dto: CreatePostDto, @CurrentUser() user: CurrentUserPayload) {
     return this.postsService.create(dto, user.id);
   }
 

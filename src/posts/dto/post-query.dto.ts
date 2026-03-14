@@ -8,7 +8,9 @@ export enum PostSortType {
 }
 
 export class PostQueryDto {
-  @ApiPropertyOptional({ description: '커서 ID (이전 페이지의 마지막 게시글 ID)' })
+  @ApiPropertyOptional({
+    description: '커서 ID (이전 페이지의 마지막 게시글 ID)',
+  })
   @IsOptional()
   @Transform(({ value }: { value: string }) => parseInt(value, 10))
   @IsInt()

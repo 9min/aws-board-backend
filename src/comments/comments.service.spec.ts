@@ -1,7 +1,4 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { CommentsService } from './comments.service';
@@ -65,9 +62,9 @@ describe('CommentsService', () => {
     it('존재하지 않는 게시글에 댓글 작성 시 NotFoundException을 던진다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.create(999, { content: '댓글' }, 1),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.create(999, { content: '댓글' }, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -145,7 +142,9 @@ describe('CommentsService', () => {
     it('존재하지 않는 댓글 삭제 시 NotFoundException을 던진다', async () => {
       mockPrismaService.comment.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove(1, 999, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(1, 999, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('다른 게시글의 댓글 삭제 시 NotFoundException을 던진다', async () => {
@@ -160,7 +159,9 @@ describe('CommentsService', () => {
     it('타인의 댓글 삭제 시 ForbiddenException을 던진다', async () => {
       mockPrismaService.comment.findUnique.mockResolvedValue(mockComment);
 
-      await expect(service.remove(1, 1, 999)).rejects.toThrow(ForbiddenException);
+      await expect(service.remove(1, 1, 999)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });
