@@ -95,6 +95,7 @@ describe('FilesService', () => {
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           input: expect.objectContaining({
             Bucket: 'test-bucket',
             ContentType: 'image/jpeg',
