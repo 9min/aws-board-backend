@@ -16,11 +16,11 @@ import { FilesService } from './files.service';
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
-  @Post('presigned-post')
+  @Post('presigned-url')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'S3 Presigned Post 발급',
+    summary: 'S3 Presigned URL 발급',
     description:
       'S3에 직접 업로드하기 위한 Presigned Post 정보를 반환한다. 최대 5MB, 유효 시간 5분. 클라이언트는 반환된 url과 fields로 multipart/form-data POST 요청을 보낸다.',
   })

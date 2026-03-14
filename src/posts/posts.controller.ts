@@ -86,6 +86,22 @@ export class PostsController {
     return this.postsService.attachFile(id, dto.key, user.id);
   }
 
+  @Delete(':id/attachments/:attachmentId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '첨부파일 단건 삭제 (작성자만, S3 파일 함께 삭제)' })
+  @ApiResponse({ status: 204, description: '첨부파일 삭제 성공' })
+  @ApiResponse({ status: 403, description: '권한 없음' })
+  @ApiResponse({ status: 404, description: '게시글 또는 첨부파일 없음' })
+  removeAttachment(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('attachmentId', ParseIntPipe) attachmentId: number,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.postsService.removeAttachment(id, attachmentId, user.id);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

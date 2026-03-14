@@ -80,6 +80,10 @@ export class PostsService {
           include: { author: { select: { id: true, nickname: true } } },
           orderBy: { createdAt: 'asc' },
         },
+        attachments: {
+          select: { id: true, url: true, key: true, postId: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
   }
@@ -114,6 +118,29 @@ export class PostsService {
     }
 
     return this.filesService.attachToPost(postId, key);
+  }
+
+  async removeAttachment(postId: number, attachmentId: number, userId: number) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+
+    if (!post) {
+      throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    }
+
+    if (post.authorId !== userId) {
+      throw new ForbiddenException('첨부파일을 삭제할 권한이 없습니다.');
+    }
+
+    const attachment = await this.prisma.fileAttachment.findUnique({
+      where: { id: attachmentId },
+    });
+
+    if (!attachment || attachment.postId !== postId) {
+      throw new NotFoundException('첨부파일을 찾을 수 없습니다.');
+    }
+
+    await this.filesService.deleteObjects([attachment.key]);
+    await this.prisma.fileAttachment.delete({ where: { id: attachmentId } });
   }
 
   async remove(id: number, userId: number) {
