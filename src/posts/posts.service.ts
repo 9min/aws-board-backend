@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PostQueryDto, PostSortType } from './dto/post-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -15,7 +16,10 @@ const POST_AUTHOR_SELECT = {
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly filesService: FilesService,
+  ) {}
 
   async create(dto: CreatePostDto, userId: number) {
     return this.prisma.post.create({
@@ -98,8 +102,25 @@ export class PostsService {
     });
   }
 
+  async attachFile(postId: number, key: string, userId: number) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+
+    if (!post) {
+      throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    }
+
+    if (post.authorId !== userId) {
+      throw new ForbiddenException('파일을 첨부할 권한이 없습니다.');
+    }
+
+    return this.filesService.attachToPost(postId, key);
+  }
+
   async remove(id: number, userId: number) {
-    const post = await this.prisma.post.findUnique({ where: { id } });
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      include: { attachments: true },
+    });
 
     if (!post) {
       throw new NotFoundException('게시글을 찾을 수 없습니다.');
@@ -107,6 +128,10 @@ export class PostsService {
 
     if (post.authorId !== userId) {
       throw new ForbiddenException('게시글을 삭제할 권한이 없습니다.');
+    }
+
+    if (post.attachments.length > 0) {
+      await this.filesService.deleteObjects(post.attachments.map((a) => a.key));
     }
 
     await this.prisma.post.delete({ where: { id } });

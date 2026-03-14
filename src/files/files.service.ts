@@ -1,37 +1,67 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreatePresignedUrlDto } from './dto/create-presigned-url.dto';
 
 export const S3_CLIENT = 'S3_CLIENT';
 
-const PRESIGNED_URL_EXPIRES_IN = 300; // 5분
+const PRESIGNED_POST_EXPIRES_IN = 300; // 5분
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 @Injectable()
 export class FilesService {
   constructor(
     @Inject(S3_CLIENT) private readonly s3Client: S3Client,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
-  async getPresignedUrl(dto: CreatePresignedUrlDto, userId: number) {
+  async getPresignedPost(dto: CreatePresignedUrlDto, userId: number) {
     const ext = path.extname(dto.fileName);
     const key = `uploads/${userId}/${randomUUID()}${ext}`;
     const bucket = this.configService.get<string>('AWS_S3_BUCKET');
 
-    const command = new PutObjectCommand({
-      Bucket: bucket,
+    const { url, fields } = await createPresignedPost(this.s3Client, {
+      Bucket: bucket ?? '',
       Key: key,
-      ContentType: dto.contentType,
+      Expires: PRESIGNED_POST_EXPIRES_IN,
+      Conditions: [
+        ['content-length-range', 0, MAX_FILE_SIZE],
+        ['eq', '$Content-Type', dto.contentType],
+      ],
+      Fields: {
+        'Content-Type': dto.contentType,
+      },
     });
 
-    const presignedUrl = await getSignedUrl(this.s3Client, command, {
-      expiresIn: PRESIGNED_URL_EXPIRES_IN,
-    });
+    return { url, fields, key };
+  }
 
-    return { presignedUrl, key };
+  async attachToPost(postId: number, key: string) {
+    const bucket = this.configService.get<string>('AWS_S3_BUCKET');
+    const region = this.configService.get<string>('AWS_REGION');
+    const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+
+    return this.prisma.fileAttachment.create({
+      data: { postId, key, url },
+    });
+  }
+
+  async deleteObjects(keys: string[]): Promise<void> {
+    if (keys.length === 0) return;
+
+    const bucket = this.configService.get<string>('AWS_S3_BUCKET');
+
+    await Promise.all(
+      keys.map((key) =>
+        this.s3Client.send(
+          new DeleteObjectCommand({ Bucket: bucket, Key: key }),
+        ),
+      ),
+    );
   }
 }

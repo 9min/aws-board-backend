@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
 import { PostQueryDto, PostSortType } from './dto/post-query.dto';
 import { PostsService } from './posts.service';
 
@@ -18,6 +19,11 @@ describe('PostsService', () => {
     },
   };
 
+  const mockFilesService = {
+    attachToPost: jest.fn(),
+    deleteObjects: jest.fn(),
+  };
+
   const mockPost = {
     id: 1,
     title: '테스트 제목',
@@ -27,6 +33,7 @@ describe('PostsService', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     author: { id: 1, nickname: '작성자' },
+    attachments: [],
   };
 
   beforeEach(async () => {
@@ -34,6 +41,7 @@ describe('PostsService', () => {
       providers: [
         PostsService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: FilesService, useValue: mockFilesService },
       ],
     }).compile();
 
@@ -162,12 +170,72 @@ describe('PostsService', () => {
     });
   });
 
+  describe('attachFile', () => {
+    const mockAttachment = {
+      id: 1,
+      postId: 1,
+      key: 'uploads/1/uuid.jpg',
+      url: 'https://bucket.s3.ap-northeast-2.amazonaws.com/uploads/1/uuid.jpg',
+      createdAt: new Date(),
+    };
+
+    it('작성자가 게시글에 파일을 첨부한다', async () => {
+      mockPrismaService.post.findUnique.mockResolvedValue(mockPost);
+      mockFilesService.attachToPost.mockResolvedValue(mockAttachment);
+
+      const result = await service.attachFile(1, 'uploads/1/uuid.jpg', 1);
+
+      expect(result).toEqual(mockAttachment);
+      expect(mockFilesService.attachToPost).toHaveBeenCalledWith(
+        1,
+        'uploads/1/uuid.jpg',
+      );
+    });
+
+    it('존재하지 않는 게시글이면 NotFoundException을 던진다', async () => {
+      mockPrismaService.post.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.attachFile(999, 'uploads/1/uuid.jpg', 1),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('타인의 게시글에 파일 첨부 시 ForbiddenException을 던진다', async () => {
+      mockPrismaService.post.findUnique.mockResolvedValue(mockPost);
+
+      await expect(
+        service.attachFile(1, 'uploads/1/uuid.jpg', 999),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
   describe('remove', () => {
-    it('작성자가 게시글을 삭제한다', async () => {
+    it('작성자가 첨부 파일 없는 게시글을 삭제한다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(mockPost);
       mockPrismaService.post.delete.mockResolvedValue(mockPost);
 
       await expect(service.remove(1, 1)).resolves.not.toThrow();
+      expect(mockFilesService.deleteObjects).not.toHaveBeenCalled();
+    });
+
+    it('첨부 파일이 있으면 S3 파일도 함께 삭제한다', async () => {
+      const postWithAttachments = {
+        ...mockPost,
+        attachments: [
+          { id: 1, key: 'uploads/1/file1.jpg' },
+          { id: 2, key: 'uploads/1/file2.jpg' },
+        ],
+      };
+      mockPrismaService.post.findUnique.mockResolvedValue(postWithAttachments);
+      mockPrismaService.post.delete.mockResolvedValue(postWithAttachments);
+      mockFilesService.deleteObjects.mockResolvedValue(undefined);
+
+      await service.remove(1, 1);
+
+      expect(mockFilesService.deleteObjects).toHaveBeenCalledWith([
+        'uploads/1/file1.jpg',
+        'uploads/1/file2.jpg',
+      ]);
     });
 
     it('존재하지 않는 게시글이면 NotFoundException을 던진다', async () => {

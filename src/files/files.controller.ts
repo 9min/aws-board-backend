@@ -16,22 +16,22 @@ import { FilesService } from './files.service';
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
-  @Post('presigned-url')
+  @Post('presigned-post')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'S3 Presigned URL 발급',
+    summary: 'S3 Presigned Post 발급',
     description:
-      'S3에 직접 업로드하기 위한 Presigned URL과 파일 key를 반환한다. URL 유효 시간은 5분이다.',
+      'S3에 직접 업로드하기 위한 Presigned Post 정보를 반환한다. 최대 5MB, 유효 시간 5분. 클라이언트는 반환된 url과 fields로 multipart/form-data POST 요청을 보낸다.',
   })
   @ApiResponse({
     status: 201,
-    description: 'presignedUrl(PUT 요청 URL)과 key(파일 식별자) 반환',
+    description: 'url, fields(서명 정보), key(파일 식별자) 반환',
   })
-  getPresignedUrl(
+  getPresignedPost(
     @Body() dto: CreatePresignedUrlDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    return this.filesService.getPresignedUrl(dto, user.id);
+    return this.filesService.getPresignedPost(dto, user.id);
   }
 }
