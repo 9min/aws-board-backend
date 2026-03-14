@@ -114,6 +114,60 @@ describe('PostsService', () => {
     });
   });
 
+  describe('findAll - offset 페이지네이션', () => {
+    it('page=1 요청 시 total, totalPages, page, limit을 반환한다', async () => {
+      const posts = Array.from({ length: 10 }, (_, i) => ({
+        ...mockPost,
+        id: i + 1,
+      }));
+      mockPrismaService.post.findMany.mockResolvedValue(posts);
+      mockPrismaService.post.count.mockResolvedValue(95);
+
+      const query: PostQueryDto = { page: 1, limit: 10, sort: PostSortType.LATEST };
+      const result = await service.findAll(query);
+
+      expect(result).toEqual({
+        items: posts,
+        total: 95,
+        page: 1,
+        totalPages: 10,
+        limit: 10,
+      });
+      expect(mockPrismaService.post.count).toHaveBeenCalledTimes(1);
+    });
+
+    it('마지막 페이지에서 totalPages가 정확하다', async () => {
+      mockPrismaService.post.findMany.mockResolvedValue([mockPost]);
+      mockPrismaService.post.count.mockResolvedValue(21);
+
+      const query: PostQueryDto = { page: 3, limit: 10, sort: PostSortType.LATEST };
+      const result = await service.findAll(query);
+
+      expect(result).toMatchObject({ page: 3, totalPages: 3, total: 21 });
+    });
+
+    it('search와 함께 page를 사용할 수 있다', async () => {
+      mockPrismaService.post.findMany.mockResolvedValue([mockPost]);
+      mockPrismaService.post.count.mockResolvedValue(5);
+
+      const query: PostQueryDto = {
+        page: 1,
+        limit: 10,
+        search: '검색어',
+        sort: PostSortType.LATEST,
+      };
+      const result = await service.findAll(query);
+
+      expect(result).toMatchObject({ total: 5, totalPages: 1 });
+      const callArg = (
+        mockPrismaService.post.findMany.mock.calls[0] as [
+          { where: { OR: unknown[] } },
+        ]
+      )[0];
+      expect(callArg.where.OR).toBeDefined();
+    });
+  });
+
   describe('findOne', () => {
     it('게시글을 조회하고 viewCount를 1 증가시킨다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(mockPost);

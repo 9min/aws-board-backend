@@ -41,14 +41,37 @@ export class PostsService {
         }
       : {};
 
-    if (query.cursor) {
-      where.id = { lt: query.cursor };
-    }
-
     const orderBy: Prisma.PostOrderByWithRelationInput =
       query.sort === PostSortType.VIEWS
         ? { viewCount: 'desc' }
         : { createdAt: 'desc' };
+
+    if (query.page) {
+      const skip = (query.page - 1) * limit;
+
+      const [items, total] = await Promise.all([
+        this.prisma.post.findMany({
+          where,
+          orderBy,
+          skip,
+          take: limit,
+          include: POST_AUTHOR_SELECT,
+        }),
+        this.prisma.post.count({ where }),
+      ]);
+
+      return {
+        items,
+        total,
+        page: query.page,
+        totalPages: Math.ceil(total / limit),
+        limit,
+      };
+    }
+
+    if (query.cursor) {
+      where.id = { lt: query.cursor };
+    }
 
     const posts = await this.prisma.post.findMany({
       where,
