@@ -1,7 +1,4 @@
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostQueryDto, PostSortType } from './dto/post-query.dto';
@@ -100,9 +97,11 @@ describe('PostsService', () => {
       };
       await service.findAll(query);
 
-      const callArg = mockPrismaService.post.findMany.mock.calls[0][0] as {
-        where: { OR: unknown[] };
-      };
+      const callArg = (
+        mockPrismaService.post.findMany.mock.calls[0] as [
+          { where: { OR: unknown[] } },
+        ]
+      )[0];
       expect(callArg.where.OR).toBeDefined();
     });
   });
@@ -149,17 +148,17 @@ describe('PostsService', () => {
     it('존재하지 않는 게시글이면 NotFoundException을 던진다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.update(999, { title: '수정' }, 1),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.update(999, { title: '수정' }, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('타인의 게시글 수정 시 ForbiddenException을 던진다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(mockPost);
 
-      await expect(
-        service.update(1, { title: '수정' }, 999),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.update(1, { title: '수정' }, 999)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 

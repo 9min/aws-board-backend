@@ -1,6 +1,5 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { FilesService, S3_CLIENT } from './files.service';
 
@@ -40,7 +39,9 @@ describe('FilesService', () => {
 
   describe('getPresignedUrl', () => {
     it('presignedUrl과 key를 반환한다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue('https://mock-presigned-url');
+      (getSignedUrl as jest.Mock).mockResolvedValue(
+        'https://mock-presigned-url',
+      );
 
       const result = await service.getPresignedUrl(
         { fileName: 'photo.jpg', contentType: 'image/jpeg' },
@@ -52,7 +53,9 @@ describe('FilesService', () => {
     });
 
     it('key는 UUID 기반으로 고유하게 생성된다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue('https://mock-presigned-url');
+      (getSignedUrl as jest.Mock).mockResolvedValue(
+        'https://mock-presigned-url',
+      );
 
       const result1 = await service.getPresignedUrl(
         { fileName: 'photo.jpg', contentType: 'image/jpeg' },
@@ -67,7 +70,9 @@ describe('FilesService', () => {
     });
 
     it('파일 확장자가 없는 경우에도 key를 생성한다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue('https://mock-presigned-url');
+      (getSignedUrl as jest.Mock).mockResolvedValue(
+        'https://mock-presigned-url',
+      );
 
       const result = await service.getPresignedUrl(
         { fileName: 'noextension', contentType: 'image/jpeg' },
@@ -78,7 +83,9 @@ describe('FilesService', () => {
     });
 
     it('S3Client에 올바른 버킷과 키로 PutObjectCommand를 호출한다', async () => {
-      (getSignedUrl as jest.Mock).mockResolvedValue('https://mock-presigned-url');
+      (getSignedUrl as jest.Mock).mockResolvedValue(
+        'https://mock-presigned-url',
+      );
 
       await service.getPresignedUrl(
         { fileName: 'photo.jpg', contentType: 'image/jpeg' },
@@ -88,6 +95,7 @@ describe('FilesService', () => {
       expect(getSignedUrl).toHaveBeenCalledWith(
         mockS3Client,
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           input: expect.objectContaining({
             Bucket: 'test-bucket',
             ContentType: 'image/jpeg',

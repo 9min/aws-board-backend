@@ -20,6 +20,7 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma generate
       - run: pnpm lint
 
   type-check:
@@ -35,6 +36,7 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma generate
       - run: pnpm tsc --noEmit
 
   test:
@@ -50,6 +52,7 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma generate
       - run: pnpm test
 
   build:
@@ -66,6 +69,7 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma generate
       - run: pnpm build
 
   deploy:

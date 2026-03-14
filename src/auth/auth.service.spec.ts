@@ -57,6 +57,7 @@ describe('AuthService', () => {
         id: 1,
         email: registerDto.email,
         nickname: registerDto.nickname,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         createdAt: expect.any(Date),
       });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
@@ -86,9 +87,14 @@ describe('AuthService', () => {
 
       await service.register(registerDto);
 
-      const createCall = mockPrismaService.user.create.mock.calls[0][0];
-      const savedPassword = createCall.data.password as string;
-      const isHashed = await bcrypt.compare(registerDto.password, savedPassword);
+      const calls = mockPrismaService.user.create.mock
+        .calls as unknown as Array<[{ data: { password: string } }]>;
+      const createCall = calls[0][0];
+      const savedPassword = createCall.data.password;
+      const isHashed = await bcrypt.compare(
+        registerDto.password,
+        savedPassword,
+      );
       expect(isHashed).toBe(true);
     });
   });
