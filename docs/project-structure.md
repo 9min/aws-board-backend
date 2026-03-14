@@ -13,6 +13,9 @@ aws-board-backend/
 ├── src/
 │   ├── main.ts                     # 애플리케이션 진입점
 │   ├── app.module.ts               # 루트 모듈
+│   ├── app.controller.ts           # 헬스체크 등 루트 컨트롤러
+│   ├── app.controller.spec.ts
+│   ├── app.service.ts
 │   │
 │   ├── auth/                       # 인증 모듈
 │   │   ├── dto/
@@ -27,12 +30,8 @@ aws-board-backend/
 │   │   ├── auth.service.ts
 │   │   └── auth.service.spec.ts
 │   │
-│   ├── users/                      # 사용자 모듈
-│   │   ├── dto/
-│   │   │   └── user-response.dto.ts
-│   │   ├── users.module.ts
-│   │   ├── users.service.ts
-│   │   └── users.service.spec.ts
+│   ├── users/                      # 사용자 모듈 (dto 폴더 준비 중)
+│   │   └── dto/
 │   │
 │   ├── posts/                      # 게시글 모듈
 │   │   ├── dto/
@@ -55,7 +54,8 @@ aws-board-backend/
 │   │
 │   ├── files/                      # 파일 업로드 모듈
 │   │   ├── dto/
-│   │   │   └── presigned-url.dto.ts
+│   │   │   ├── create-presigned-url.dto.ts
+│   │   │   └── attach-file.dto.ts
 │   │   ├── files.controller.ts
 │   │   ├── files.module.ts
 │   │   ├── files.service.ts
@@ -76,8 +76,7 @@ aws-board-backend/
 │       │   └── httpException.filter.ts     # 전역 에러 필터
 │       ├── interceptors/
 │       │   └── response.interceptor.ts     # 성공 응답 변환
-│       └── pipes/
-│           └── (custom pipes)
+│       └── pipes/                  # (커스텀 파이프 추가 위치)
 │
 ├── test/                           # E2E 테스트
 │   ├── app.e2e-spec.ts
@@ -87,10 +86,12 @@ aws-board-backend/
 ├── .env.example                    # 환경변수 템플릿
 ├── .gitignore
 ├── .prettierrc
+├── docker-compose.yml              # 로컬 PostgreSQL 컨테이너 설정
 ├── eslint.config.mjs
 ├── nest-cli.json
 ├── package.json
 ├── pnpm-lock.yaml
+├── README.md
 ├── tsconfig.json
 └── tsconfig.build.json
 ```
