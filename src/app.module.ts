@@ -5,7 +5,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
-import { FilesModule } from './files/files.module';
 import { PostsModule } from './posts/posts.module';
 import { HttpExceptionFilter } from './common/filters/httpException.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -23,7 +22,6 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     PostsModule,
     CommentsModule,
-    FilesModule,
   ],
   controllers: [AppController],
   providers: [
