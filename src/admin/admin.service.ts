@@ -96,17 +96,18 @@ export class AdminService {
       select: { key: true },
     });
 
-    // S3 파일 삭제
-    if (attachments.length > 0) {
-      await this.filesService.deleteObjects(attachments.map((a) => a.key));
-    }
-
-    // 트랜잭션: 댓글(타인 게시글) → 게시글(cascade로 댓글/첨부파일 DB 삭제) → 사용자
+    // DB 먼저 삭제 (트랜잭션 보장) → S3는 이후 best-effort 처리
+    // 순서 보장: S3 성공 후 DB 실패 시 파일만 사라지는 불일치 방지
     await this.prisma.$transaction([
       this.prisma.comment.deleteMany({ where: { authorId: id } }),
       this.prisma.post.deleteMany({ where: { authorId: id } }),
       this.prisma.user.delete({ where: { id } }),
     ]);
+
+    // S3 파일 삭제 (DB 커밋 후 실행 — 실패 시 고아 파일만 남고 서비스는 정상)
+    if (attachments.length > 0) {
+      await this.filesService.deleteObjects(attachments.map((a) => a.key));
+    }
   }
 
   async findAllPosts(query: AdminPostQueryDto) {
@@ -184,11 +185,12 @@ export class AdminService {
       throw new NotFoundException('게시글을 찾을 수 없습니다.');
     }
 
+    // DB 먼저 삭제 → S3는 이후 best-effort 처리
+    await this.prisma.post.delete({ where: { id } });
+
     if (post.attachments.length > 0) {
       await this.filesService.deleteObjects(post.attachments.map((a) => a.key));
     }
-
-    await this.prisma.post.delete({ where: { id } });
   }
 
   async findAllComments(query: AdminCommentQueryDto) {

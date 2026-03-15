@@ -14,7 +14,11 @@ export class AdminGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
-    const user = request.user as CurrentUserPayload;
+    const user = request.user as CurrentUserPayload | undefined;
+
+    if (!user) {
+      throw new ForbiddenException('관리자 권한이 필요합니다.');
+    }
 
     const adminEmails = this.configService.get<string>('admin.emails') ?? '';
     const emailList = adminEmails
