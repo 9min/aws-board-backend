@@ -10,6 +10,9 @@ export default () => ({
     region: process.env.AWS_REGION ?? 'ap-northeast-2',
     s3Bucket: process.env.AWS_S3_BUCKET ?? '',
   },
+  admin: {
+    emails: process.env.ADMIN_EMAILS ?? '',
+  },
   database: {
     url: process.env.DATABASE_URL ?? '',
   },

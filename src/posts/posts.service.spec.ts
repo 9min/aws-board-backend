@@ -123,7 +123,11 @@ describe('PostsService', () => {
       mockPrismaService.post.findMany.mockResolvedValue(posts);
       mockPrismaService.post.count.mockResolvedValue(95);
 
-      const query: PostQueryDto = { page: 1, limit: 10, sort: PostSortType.LATEST };
+      const query: PostQueryDto = {
+        page: 1,
+        limit: 10,
+        sort: PostSortType.LATEST,
+      };
       const result = await service.findAll(query);
 
       expect(result).toEqual({
@@ -140,7 +144,11 @@ describe('PostsService', () => {
       mockPrismaService.post.findMany.mockResolvedValue([mockPost]);
       mockPrismaService.post.count.mockResolvedValue(21);
 
-      const query: PostQueryDto = { page: 3, limit: 10, sort: PostSortType.LATEST };
+      const query: PostQueryDto = {
+        page: 3,
+        limit: 10,
+        sort: PostSortType.LATEST,
+      };
       const result = await service.findAll(query);
 
       expect(result).toMatchObject({ page: 3, totalPages: 3, total: 21 });
@@ -274,35 +282,51 @@ describe('PostsService', () => {
 
     it('작성자가 첨부파일을 삭제하면 S3에서도 삭제된다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(mockPost);
-      (mockPrismaService as unknown as { fileAttachment: { findUnique: jest.Mock; delete: jest.Mock } }).fileAttachment = {
+      (
+        mockPrismaService as unknown as {
+          fileAttachment: { findUnique: jest.Mock; delete: jest.Mock };
+        }
+      ).fileAttachment = {
         findUnique: jest.fn().mockResolvedValue(mockAttachment),
         delete: jest.fn().mockResolvedValue(mockAttachment),
       };
       mockFilesService.deleteObjects.mockResolvedValue(undefined);
 
       await expect(service.removeAttachment(1, 2, 1)).resolves.not.toThrow();
-      expect(mockFilesService.deleteObjects).toHaveBeenCalledWith(['uploads/1/uuid.jpg']);
+      expect(mockFilesService.deleteObjects).toHaveBeenCalledWith([
+        'uploads/1/uuid.jpg',
+      ]);
     });
 
     it('게시글이 없으면 NotFoundException을 던진다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(null);
 
-      await expect(service.removeAttachment(999, 2, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.removeAttachment(999, 2, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('타인의 게시글 첨부파일 삭제 시 ForbiddenException을 던진다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(mockPost);
 
-      await expect(service.removeAttachment(1, 2, 999)).rejects.toThrow(ForbiddenException);
+      await expect(service.removeAttachment(1, 2, 999)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('첨부파일이 없으면 NotFoundException을 던진다', async () => {
       mockPrismaService.post.findUnique.mockResolvedValue(mockPost);
-      (mockPrismaService as unknown as { fileAttachment: { findUnique: jest.Mock } }).fileAttachment = {
+      (
+        mockPrismaService as unknown as {
+          fileAttachment: { findUnique: jest.Mock };
+        }
+      ).fileAttachment = {
         findUnique: jest.fn().mockResolvedValue(null),
       };
 
-      await expect(service.removeAttachment(1, 999, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.removeAttachment(1, 999, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
