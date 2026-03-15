@@ -1,4 +1,9 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -7,6 +12,7 @@ import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;
+  let configService: ConfigService;
 
   const mockPrismaService = {
     user: {
@@ -25,10 +31,12 @@ describe('AuthService', () => {
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
+    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(() => {
@@ -138,6 +146,59 @@ describe('AuthService', () => {
 
       await expect(service.login(loginDto)).rejects.toThrow(
         UnauthorizedException,
+      );
+    });
+  });
+
+  describe('getMe', () => {
+    const mockUser = {
+      id: 1,
+      email: 'test@example.com',
+      nickname: '테스트유저',
+      createdAt: new Date(),
+    };
+
+    it('사용자 정보와 isAdmin을 반환한다', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      jest.spyOn(configService, 'get').mockReturnValue('test@example.com');
+
+      const result = await service.getMe(1, 'test@example.com');
+
+      expect(result).toEqual({
+        ...mockUser,
+        isAdmin: true,
+      });
+    });
+
+    it('관리자 이메일이 아니면 isAdmin이 false이다', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      jest.spyOn(configService, 'get').mockReturnValue('admin@other.com');
+
+      const result = await service.getMe(1, 'test@example.com');
+
+      expect(result).toEqual({
+        ...mockUser,
+        isAdmin: false,
+      });
+    });
+
+    it('ADMIN_EMAILS 미설정 시 isAdmin이 false이다', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      jest.spyOn(configService, 'get').mockReturnValue(undefined);
+
+      const result = await service.getMe(1, 'test@example.com');
+
+      expect(result).toEqual({
+        ...mockUser,
+        isAdmin: false,
+      });
+    });
+
+    it('존재하지 않는 사용자면 NotFoundException을 던진다', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getMe(999, 'x@test.com')).rejects.toThrow(
+        NotFoundException,
       );
     });
   });

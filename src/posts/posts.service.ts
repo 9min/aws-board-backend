@@ -104,7 +104,13 @@ export class PostsService {
           orderBy: { createdAt: 'asc' },
         },
         attachments: {
-          select: { id: true, url: true, key: true, postId: true, createdAt: true },
+          select: {
+            id: true,
+            url: true,
+            key: true,
+            postId: true,
+            createdAt: true,
+          },
           orderBy: { createdAt: 'asc' },
         },
       },

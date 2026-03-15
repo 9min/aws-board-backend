@@ -1,10 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // 보안 HTTP 헤더
+  app.use(helmet());
 
   // 전역 API 접두사
   app.setGlobalPrefix('api/v1');
@@ -19,7 +23,15 @@ async function bootstrap() {
   );
 
   // CORS 설정
-  app.enableCors();
+  const corsOrigin = process.env.CORS_ORIGIN;
+  app.enableCors({
+    origin: corsOrigin
+      ? corsOrigin.split(',').map((o) => o.trim())
+      : 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
 
   // Swagger 설정
   const config = new DocumentBuilder()
