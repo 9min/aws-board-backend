@@ -1,0 +1,9 @@
+# 줄바꿈 통일
+* text=auto eol=lf
+*.{ts,js,tsx,jsx,json,yaml,yml,md} text eol=lf
+*.{sh,bash} text eol=lf executable
+
+# 바이너리
+*.{png,jpg,jpeg,gif,svg,ico} binary
+*.pdf binary
+*.zip binary
