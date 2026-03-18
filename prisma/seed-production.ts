@@ -1,9 +1,13 @@
 /**
  * 상용 서버에 AWS 관련 더미 데이터 삽입 스크립트
  * API를 통해 회원가입 → 게시글 작성 → 댓글 작성 순서로 진행
+ *
+ * 실행 전 환경변수 설정 필요:
+ *   SEED_BASE_URL=https://<your-domain>/api/v1
+ *   SEED_PASSWORD=<seed-account-password>
  */
 
-const BASE_URL = 'https://dibhzpfpsg3ou.cloudfront.net/api/v1';
+const BASE_URL = process.env.SEED_BASE_URL ?? 'http://localhost:3000/api/v1';
 
 const posts = [
   {
@@ -357,13 +361,23 @@ interface AuthResponse {
   error: null;
 }
 
-async function register(email: string, password: string, nickname: string) {
+interface RegisterResponse {
+  data: { id: number } | null;
+  error: { message: string } | null;
+}
+
+interface PostResponse {
+  data: { id: number } | null;
+  error: { message: string } | null;
+}
+
+async function register(email: string, password: string, nickname: string): Promise<RegisterResponse> {
   const res = await fetch(`${BASE_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, nickname }),
   });
-  return res.json();
+  return res.json() as Promise<RegisterResponse>;
 }
 
 async function login(email: string, password: string): Promise<string> {
@@ -376,7 +390,7 @@ async function login(email: string, password: string): Promise<string> {
   return data.data.accessToken;
 }
 
-async function createPost(token: string, title: string, content: string) {
+async function createPost(token: string, title: string, content: string): Promise<PostResponse> {
   const res = await fetch(`${BASE_URL}/posts`, {
     method: 'POST',
     headers: {
@@ -385,7 +399,7 @@ async function createPost(token: string, title: string, content: string) {
     },
     body: JSON.stringify({ title, content }),
   });
-  return res.json();
+  return res.json() as Promise<PostResponse>;
 }
 
 async function createComment(token: string, postId: number, content: string) {
@@ -402,7 +416,10 @@ async function createComment(token: string, postId: number, content: string) {
 
 async function main() {
   const email = 'seed@aws-board.dev';
-  const password = 'Seed@1234!';
+  const password = process.env.SEED_PASSWORD;
+  if (!password) {
+    throw new Error('SEED_PASSWORD 환경변수가 설정되지 않았습니다.');
+  }
   const nickname = 'AWS개발자';
 
   // 계정 생성 (이미 있으면 로그인만)
@@ -416,8 +433,12 @@ async function main() {
     const { title, content, comments } = posts[i];
 
     // 게시글 생성
-    const postRes = await createPost(token, title, content) as { data: { id: number } };
-    const postId = postRes.data.id;
+    const postRes = await createPost(token, title, content);
+    const postId = postRes.data?.id;
+    if (!postId) {
+      console.error(`  [${i + 1}/${posts.length}] 게시글 생성 실패: "${title}"`);
+      continue;
+    }
 
     // 댓글 생성
     for (const comment of comments) {

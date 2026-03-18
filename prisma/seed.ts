@@ -159,8 +159,10 @@ const posts = [
 async function main() {
   // 테스트 유저 생성
   const hashedPassword = await bcrypt.hash('password123!', 10);
-  const user = await prisma.user.create({
-    data: {
+  const user = await prisma.user.upsert({
+    where: { email: 'test@example.com' },
+    update: {},
+    create: {
       email: 'test@example.com',
       password: hashedPassword,
       nickname: '테스트유저',
